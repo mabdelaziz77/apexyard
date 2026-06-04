@@ -14,7 +14,15 @@ Design rationale: [`docs/agdr/AgDR-0048-topology-templates.md`](../docs/agdr/AgD
 | [`python-fastapi`](python-fastapi/) | Building an HTTP service with persistence, JWT auth, and OpenAPI docs | Python type hints + Pydantic validation + FastAPI conventions | Python |
 | [`go-data-pipeline`](go-data-pipeline/) | Building a batch or streaming pipeline (ETL, event processor) with no HTTP surface | Go's enforced error returns + module boundaries + stdlib-first | Go |
 
-If your project doesn't match any of the three, run `/handover` without picking a topology — you'll get the existing flow plus the framework's default handbooks (the universal layer applies regardless).
+### Fork-local additions
+
+These topologies live in this fork only — they are **not** part of the upstream framework-curated set, and were added ahead of upstream's 5-adopter demand gate to govern a concrete project. Expect them to surface as drift on the next `/update`.
+
+| Topology | Use when | Ambient affordances | Primary language | Decision |
+|----------|----------|---------------------|------------------|----------|
+| [`joomla-extension`](joomla-extension/) | Building a Joomla 5–6 extension (component / plugin / module) using the MVC pattern + DI container | PSR-12 + strict typing + Joomla security primitives (escaping, CSRF, prepared statements) | PHP | [AgDR-0053](../docs/agdr/AgDR-0053-joomla-extension-topology.md) |
+
+If your project doesn't match any of the above, run `/handover` without picking a topology — you'll get the existing flow plus the framework's default handbooks (the universal layer applies regardless).
 
 ## Directory shape
 
@@ -40,6 +48,8 @@ v1 is **framework-curated only** — adopter-authored topologies are deferred to
 2. Wait until at least 5 adopters have asked for the same shape (mitigates topology proliferation per #297)
 3. Open a framework PR that adds `topologies/<name>/` with the directory shape above
 4. Bump the topology's `VERSION` per the rules below; first PR is `1.0.0`
+
+**Fork-local exception.** A fork may add a topology to its own copy *ahead of* the 5-adopter upstream gate when it has a concrete project to govern — wired into the fork's `/handover` and `README.md` but not PR'd upstream. Record the deviation in an AgDR. `joomla-extension` (added for `mod_jrshowcase`, see [AgDR-0053](../docs/agdr/AgDR-0053-joomla-extension-topology.md)) is the reference example. If upstream demand later reaches the gate, promote the bundle via the normal path above.
 
 ## Versioning
 
