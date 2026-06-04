@@ -33,7 +33,7 @@ Every Joomla extension registers itself in Joomla's DI container through `servic
 
 ## Why
 
-Joomla 4+ introduced a proper DI container (based on `Joomla\DI\Container`). The service provider is how extensions participate. Skipping it means the extension either uses deprecated static factories (which will be removed in Joomla 7) or constructs dependencies manually (untestable, brittle).
+Joomla 4+ introduced a proper DI container (based on `Joomla\DI\Container`). The service provider is how extensions participate. Skipping it means the extension either uses deprecated static factories (slated for removal in a future major) or constructs dependencies manually (untestable, brittle).
 
 The Extension class (`src/Extension/ExampleComponent.php`) is the public face — it retrieves services from the container registered by `provider.php` and exposes them to the MVC layer. Getting this wiring right means models, views, and controllers all receive their dependencies through factories, making the entire extension testable and mockable.
 
