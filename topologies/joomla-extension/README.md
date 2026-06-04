@@ -27,7 +27,7 @@ If your codebase is PHP but **not** Joomla (Laravel, Symfony, WordPress), this t
 | Affordance | How it's provided | Why it matters to Rex |
 |------------|-------------------|------------------------|
 | PSR-12 coding standard | `phpcs` / `php-cs-fixer` config in `composer.json` or `.php-cs-fixer.dist.php` | Style handbook can flag violations |
-| Strict typing | `declare(strict_types=1);` at top of every PHP file | Type-safety handbook applies |
+| Type safety (optional) | PHPStan (`phpstan.neon`) on new standalone classes; NOT `declare(strict_types=1)` everywhere — core (J5 + J6) uses neither | Type-safety handbook is advisory; never flags untyped core-idiom MVC code |
 | Namespace conventions | `<Vendor>\Component\<Name>\{Administrator,Site}\` mapped via manifest `<namespace path="src">` | Namespace handbook can flag mis-mapped classes |
 | DI service provider | `services/provider.php` registering the extension in Joomla's container | Service-provider handbook is enforceable |
 | Joomla security primitives | `$this->escape()`, `HTMLHelper`, CSRF tokens via `Session::checkToken()`, `$db->quote()` / prepared statements | Security handbook fires on template + model files |

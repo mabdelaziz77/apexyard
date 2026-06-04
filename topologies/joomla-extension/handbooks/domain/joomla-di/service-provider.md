@@ -20,7 +20,7 @@ Every Joomla extension registers itself in Joomla's DI container through `servic
 | Plugin provider | Register under `PluginInterface::class`; use `PluginHelper::getPlugin()` only in legacy paths |
 | MVCFactory registration | `$container->registerServiceProvider(new MVCFactory('\\Vendor\\Component\\Name'));` |
 | Dispatcher registration | `$container->registerServiceProvider(new DispatcherFactory('\\Vendor\\Component\\Name'));` |
-| Database injection | Get `DatabaseInterface::class` from the container; never use `Factory::getDbo()` (deprecated since Joomla 4.3, removed in 7.0) |
+| Database injection | Get `DatabaseInterface::class` from the container; avoid `Factory::getDbo()` — it is deprecated (it emits an `@trigger_error` telling you to load the database from the DI container; verified in `libraries/src/Factory.php`) and slated for removal in a future major |
 | Router registration | For components with SEF URLs: register `RouterFactoryInterface::class` |
 
 | Anti-pattern | Why it's broken |
@@ -50,7 +50,7 @@ Surface a finding when:
 
 ## Sample finding
 
-> **Service provider (Joomla)** — `src/Model/ItemModel.php:15` calls `Factory::getDbo()` to get a database connection. This method is deprecated since Joomla 4.3 and will be removed in 7.0. The model should receive `DatabaseInterface` through the MVCFactory, which injects it automatically when the model is created via `$this->getModel('Item')` in the controller.
+> **Service provider (Joomla)** — `src/Model/ItemModel.php:15` calls `Factory::getDbo()` to get a database connection. This method is deprecated (it emits a deprecation `@trigger_error` directing you to the DI container) and slated for removal in a future major. The model should receive `DatabaseInterface` through the MVCFactory, which injects it automatically when the model is created via `$this->getModel('Item')` in the controller.
 >
 > **Service provider (Joomla)** — `services/provider.php` registers the MVCFactory but doesn't register `RouterFactoryInterface`. The component's SEF URLs won't resolve. Add `$container->registerServiceProvider(new RouterFactory(...))`.
 
@@ -66,11 +66,11 @@ Surface a finding when:
 ```php
 <?php
 
-declare(strict_types=1);
-
 // services/provider.php
+// Core's provider.php carries the standard file header and no
+// declare(strict_types=1) — match that. See the type-safety handbook.
 
-defined('_JEXEC') or die;
+\defined('_JEXEC') or die;
 
 use Joomla\CMS\Dispatcher\ComponentDispatcherFactoryInterface;
 use Joomla\CMS\Extension\ComponentInterface;

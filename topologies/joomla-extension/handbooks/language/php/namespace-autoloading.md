@@ -17,7 +17,7 @@ Every class in a Joomla extension uses PSR-4 namespaces registered through the e
 |---|---|
 | Namespace-to-path mapping | `Vendor\Component\Example\Administrator\Model\ItemModel` → `administrator/components/com_example/src/Model/ItemModel.php` |
 | One class per file | File name matches class name exactly (PSR-4) |
-| No `_JEXEC` in namespaced files | Namespaced classes under `src/` are autoloaded; the `defined('_JEXEC') or die;` guard goes in entry-point files only (`services/provider.php`, `tmpl/`, etc.) |
+| `_JEXEC` guard IS kept in namespaced `src/` files | Joomla core keeps `\defined('_JEXEC') or die;` in **every** namespaced `src/` class (Models, Controllers, Views, Tables) as defense-in-depth — verified in `com_banners` and `com_contact`, both J5 and J6. Because the guard is a side-effecting statement in a file that PSR-1 says should only declare symbols, core wraps it in `// phpcs:disable PSR1.Files.SideEffects` / `// phpcs:enable PSR1.Files.SideEffects`. Match that exact form. |
 | Extension class location | `src/Extension/<Name>Component.php` (or `<Name>Plugin.php`, `<Name>Module.php`) |
 | Service provider location | `services/provider.php` — NOT under `src/` (it's the bootstrap, not an autoloaded class) |
 
@@ -34,7 +34,7 @@ Surface a finding when:
 1. A class under `src/` doesn't declare a `namespace` matching the PSR-4 path from manifest.
 2. A class filename doesn't match the class name (case-sensitive on Linux).
 3. The manifest `<namespace path="src">` is missing or points to the wrong directory.
-4. A new class is added under `src/` but uses `defined('_JEXEC') or die;` — this guard is unnecessary in autoloaded namespaced classes and adds dead code.
+4. A new namespaced class under `src/` is **missing** the `\defined('_JEXEC') or die;` guard, or includes it **without** the `// phpcs:disable PSR1.Files.SideEffects` / `// phpcs:enable PSR1.Files.SideEffects` wrapper that core uses. (Core keeps the guard in every `src/` file — its absence, not its presence, is the finding.)
 5. `services/provider.php` is moved into `src/` — it must remain at the expected path for Joomla's boot sequence.
 6. A class uses `JLoader::register()` instead of relying on the PSR-4 namespace — legacy pattern, should be migrated.
 
@@ -42,12 +42,17 @@ Surface a finding when:
 
 > **Namespace (Joomla)** — `administrator/components/com_example/src/Model/ItemModel.php` declares `namespace Acme\Component\Example\Model;` but should be `namespace Acme\Component\Example\Administrator\Model;`. Without the `Administrator` segment, Joomla's autoloader won't find the class, and the admin list view will throw "Class not found".
 >
-> **Namespace (Joomla)** — `src/Helper/UtilHelper.php` contains `defined('_JEXEC') or die;`. This file is under `src/` and autoloaded via PSR-4; the guard is dead code. Remove it — it only belongs in non-autoloaded entry points like `tmpl/` files.
+> **Namespace (Joomla)** — `src/Model/ItemModel.php` is missing the `\defined('_JEXEC') or die;` guard. Joomla core keeps this guard in every namespaced `src/` class (defense-in-depth). Add it, wrapped exactly as core does:
+> ```php
+> // phpcs:disable PSR1.Files.SideEffects
+> \defined('_JEXEC') or die;
+> // phpcs:enable PSR1.Files.SideEffects
+> ```
 
 ## What's NOT a violation
 
-- `services/provider.php` using `defined('_JEXEC') or die;` — it's an entry point, not an autoloaded class.
-- `tmpl/*.php` files not having namespaces — templates are included, not autoloaded.
+- `services/provider.php` using `\defined('_JEXEC') or die;` — entry points keep the guard (and so do `src/` classes; see the rule above).
+- `tmpl/*.php` files not having namespaces — templates are included, not autoloaded. They keep a plain `defined('_JEXEC') or die;` (no phpcs wrapper needed — templates aren't PSR-1 symbol files).
 - Legacy `JLoader::register()` in a file explicitly marked with a `// @legacy` comment and a migration ticket reference.
 - `script.php` (install/update script) at the extension root — it's loaded by the installer, not autoloaded.
 
