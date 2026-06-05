@@ -218,5 +218,89 @@ jobs:
           | Manifest XML | ${{ steps.manifest.outputs.status || 'skip' }} |
 
           ---
-          Topology: joomla-extension v1.0.0
+          Topology: joomla-extension v1.1.0
           EOF
+
+  # ---------------------------------------------------------------------------
+  # JED-readiness proxy.
+  #
+  # This is NOT JEDChecker. JEDChecker (joomla-extensions/jedchecker) is a Joomla
+  # admin component with no CLI or reusable GitHub Action, so it cannot run in CI.
+  # This job is a fast PROXY for its cheapest-to-automate rules (GplRule, JexecRule,
+  # ErrorReportingRule, LanguageRule basics) so JED-blocking mistakes are caught on
+  # every PR. Before submitting to the JED, still run the real JEDChecker component
+  # on a Joomla test site. See handbooks/domain/joomla-jed/jed-listing-readiness.md.
+  # ---------------------------------------------------------------------------
+  jed-readiness:
+    name: "JED-readiness (proxy)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: _JEXEC guard on every PHP file (JexecRule)
+        run: |
+          missing=$(grep -rL --include='*.php' "_JEXEC" . | grep -vE '(^|/)(vendor|tests|node_modules)/' || true)
+          if [ -n "$missing" ]; then
+            echo "::error::PHP files missing 'defined('_JEXEC') or die;' (JEDChecker JexecRule):"
+            echo "$missing"
+            exit 1
+          fi
+          echo "All PHP files carry the _JEXEC guard."
+
+      - name: GPL license header on every PHP file (GplRule)
+        run: |
+          missing=$(grep -riL --include='*.php' -E "GNU General Public License|GPL" . | grep -vE '(^|/)(vendor|tests|node_modules)/' || true)
+          if [ -n "$missing" ]; then
+            echo "::error::PHP files missing a GPL license header (JEDChecker GplRule):"
+            echo "$missing"
+            exit 1
+          fi
+          echo "All PHP files carry a GPL header."
+
+      - name: No error_reporting(0) (ErrorReportingRule)
+        run: |
+          hits=$(grep -rn --include='*.php' -E "error_reporting\s*\(\s*0\s*\)" . | grep -vE '(^|/)(vendor|tests|node_modules)/' || true)
+          if [ -n "$hits" ]; then
+            echo "::error::error_reporting(0) is disallowed (JEDChecker ErrorReportingRule):"
+            echo "$hits"
+            exit 1
+          fi
+          echo "No error_reporting(0) found."
+
+      - name: Language INI lint (LanguageRule basics)
+        run: |
+          rc=0
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            # BOM check
+            if head -c3 "$f" | grep -q $'\xEF\xBB\xBF'; then
+              echo "::error::$f has a UTF-8 BOM (JEDChecker LanguageRule)"; rc=1
+            fi
+            lineno=0
+            declare -A seen=()
+            while IFS= read -r line || [ -n "$line" ]; do
+              lineno=$((lineno+1))
+              case "$line" in ''|';'*) continue;; esac
+              key=${line%%=*}
+              # whitespace in key
+              if printf '%s' "$key" | grep -q '[[:space:]]'; then
+                echo "::error::$f:$lineno key has whitespace: '$key'"; rc=1
+              fi
+              # uppercase ASCII key
+              if printf '%s' "$key" | grep -qE '[^A-Z0-9_]'; then
+                echo "::error::$f:$lineno key not UPPERCASE/ASCII: '$key'"; rc=1
+              fi
+              # duplicate key
+              if [ -n "${seen[$key]:-}" ]; then
+                echo "::error::$f:$lineno duplicate key '$key' (first on line ${seen[$key]})"; rc=1
+              fi
+              seen[$key]=$lineno
+              # quoted value
+              val=${line#*=}
+              case "$val" in \"*\") ;; *) echo "::error::$f:$lineno value not double-quoted: '$line'"; rc=1;; esac
+            done < "$f"
+            unset seen
+          done < <(find . -name '*.ini' -path '*/language/*' | grep -vE '(^|/)(vendor|tests|node_modules)/')
+          [ "$rc" -eq 0 ] && echo "Language INI files pass the proxy lint."
+          exit $rc

@@ -1,6 +1,6 @@
 # Topology: Joomla Extension (Component / Plugin / Module)
 
-**Version**: 1.0.0
+**Version**: 1.1.0
 **Stack**: PHP 8.2+ + Joomla 5.x / 6.x + PSR-12 + PHPStan + PHPUnit + Composer
 **Use this when**: building a Joomla extension (component, plugin, module, or package) that follows the Joomla MVC pattern, uses the DI container, and targets Joomla 5 or 6.
 
@@ -12,8 +12,8 @@ Pick this topology in `/handover` and the skill instantiates:
 |-------|--------------------|-----------------|
 | Architecture handbooks | `clean-architecture-layers.md`, `migration-safety.md` (always-load, blocking) | `handbooks/architecture/` |
 | Language handbooks | `strict-typing.md`, `psr12-style.md`, `namespace-autoloading.md` | `handbooks/language/php/` |
-| Domain handbooks | `joomla-di/service-provider.md`, `joomla-security/input-output-safety.md`, `joomla-db/query-builder-safety.md` | `handbooks/domain/<area>/` (each has `paths:` frontmatter) |
-| CI pipeline | `joomla-ci.yml` (PHP-CS-Fixer + PHPStan + PHPUnit + extension package build) | `.github/workflows/` |
+| Domain handbooks | `joomla-di/service-provider.md`, `joomla-security/input-output-safety.md`, `joomla-db/query-builder-safety.md`, `joomla-i18n/language-and-translation.md`, `joomla-jed/jed-listing-readiness.md` | `handbooks/domain/<area>/` (each has `paths:` frontmatter) |
+| CI pipeline | `joomla-ci.yml` (PHP-CS-Fixer + PHPStan + PHPUnit + extension package build + `jed-readiness` proxy job) | `.github/workflows/` |
 | AgDR template | `agdr-joomla-extension.md` (extension type, namespace, DB strategy, auth prompts) | `docs/agdr/agdr-joomla-extension.draft.md` |
 
 ## Why pick this topology
@@ -31,7 +31,9 @@ If your codebase is PHP but **not** Joomla (Laravel, Symfony, WordPress), this t
 | Namespace conventions | `<Vendor>\Component\<Name>\{Administrator,Site}\` mapped via manifest `<namespace path="src">` | Namespace handbook can flag mis-mapped classes |
 | DI service provider | `services/provider.php` registering the extension in Joomla's container | Service-provider handbook is enforceable |
 | Joomla security primitives | `$this->escape()`, `HTMLHelper`, CSRF tokens via `Session::checkToken()`, `$db->quote()` / prepared statements | Security handbook fires on template + model files |
-| PHPStan baseline | `phpstan.neon` at repo root with level ≥ 5 | Static analysis gates apply |
+| Translatable strings | `Text::_()` + UPPERCASE-keyed `language/xx-XX/*.ini` + `.sys.ini`; no hardcoded UI literals | i18n handbook fires on language files, templates, views |
+| JED listing rules | GPL header + `_JEXEC` per PHP file, valid language INIs, manifest name == JED name (JEDChecker) | JED-readiness handbook + the `jed-readiness` CI proxy job |
+| PHPStan baseline | `phpstan.neon` at a level the project can pass (1–2 to start, raise incrementally) | Static analysis gates apply |
 | PHPUnit test suite | `phpunit.xml` + `tests/` directory | Test coverage gates apply |
 
 ## Files in this bundle
@@ -54,10 +56,14 @@ joomla-extension/
 │       │   └── service-provider.md                          ← paths: **/services/provider.php, **/Extension/**
 │       ├── joomla-security/
 │       │   └── input-output-safety.md                       ← paths: **/tmpl/**, **/View/**, **/Controller/**
-│       └── joomla-db/
-│           └── query-builder-safety.md                      ← paths: **/Model/**, **/Table/**, **/sql/**
+│       ├── joomla-db/
+│       │   └── query-builder-safety.md                      ← paths: **/Model/**, **/Table/**, **/sql/**
+│       ├── joomla-i18n/
+│       │   └── language-and-translation.md                  ← paths: **/language/**, **/*.ini, **/tmpl/**
+│       └── joomla-jed/
+│           └── jed-listing-readiness.md                     ← paths: **/*.php, **/*.xml, **/*.ini
 ├── golden-paths/
-│   └── joomla-ci.yml
+│   └── joomla-ci.yml                                        ← incl. jed-readiness proxy job
 └── templates/
     └── agdr-joomla-extension.md
 ```
