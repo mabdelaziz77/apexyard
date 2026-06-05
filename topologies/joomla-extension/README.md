@@ -59,7 +59,7 @@ joomla-extension/
 │       ├── joomla-db/
 │       │   └── query-builder-safety.md                      ← paths: **/Model/**, **/Table/**, **/sql/**
 │       ├── joomla-i18n/
-│       │   └── language-and-translation.md                  ← paths: **/language/**, **/*.ini, **/tmpl/**
+│       │   └── language-and-translation.md                  ← paths: **/language/**, **/*.ini, **/tmpl/**, **/src/**, **/*.xml
 │       └── joomla-jed/
 │           └── jed-listing-readiness.md                     ← paths: **/*.php, **/*.xml, **/*.ini
 ├── golden-paths/

@@ -296,7 +296,9 @@ jobs:
                 echo "::error::$f:$lineno duplicate key '$key' (first on line ${seen[$key]})"; rc=1
               fi
               seen[$key]=$lineno
-              # quoted value
+              # quoted value — shallow check: verifies the value opens AND closes
+              # with a double quote, not full INI escaping. The JEDChecker component
+              # does the rigorous parse; this is a proxy pre-flight.
               val=${line#*=}
               case "$val" in \"*\") ;; *) echo "::error::$f:$lineno value not double-quoted: '$line'"; rc=1;; esac
             done < "$f"
