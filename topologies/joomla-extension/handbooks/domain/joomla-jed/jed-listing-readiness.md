@@ -62,6 +62,26 @@ Surface a finding when:
 - A deliberate, documented `@`-suppression on a single call with a comment explaining why (FrameworkRule is a warning, not a hard fail).
 - Test files under `tests/`.
 
+## Release packaging + JED submission (per release)
+
+The topology ships three release artifacts (copy them into your extension repo):
+
+| Artifact | Copy to | What it does |
+|----------|---------|--------------|
+| `golden-paths/build.sh` | `build/build.sh` | Manifest-driven package builder — reads the extension name + `<version>` and produces a clean `dist/<ext>-<version>.zip` (excludes VCS/dev files). This is the artifact you feed to **JEDChecker** and upload to Joomla. |
+| `golden-paths/release.yml` | `.github/workflows/release.yml` | On a `v*` tag, runs `build.sh` and attaches the zip to the GitHub Release. |
+| `templates/jed-submission.md` | `docs/jed-submission.md` | The JED listing form metadata — fill it in once, keep it current each release. |
+
+The per-release flow:
+
+1. Bump the manifest `<version>`; update `docs/jed-submission.md`.
+2. `bash build/build.sh` → `dist/<ext>-<version>.zip`.
+3. Run the **JEDChecker** component against the zip on a Joomla test site; fix any findings (the rules above + the `jed-readiness` CI proxy catch most pre-flight).
+4. Smoke-test on a clean Joomla install.
+5. Tag `vX.Y.Z` (the release workflow publishes the asset) and submit/update the JED listing from `docs/jed-submission.md`.
+
+Add `dist/` to `.gitignore` — the package is a build output, never committed (the old "commit the zip" habit causes version drift).
+
 ## Related
 
 - `joomla-i18n/language-and-translation.md` — the LanguageRule detail.
