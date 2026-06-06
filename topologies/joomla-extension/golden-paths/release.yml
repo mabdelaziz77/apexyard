@@ -1,0 +1,36 @@
+# Release packaging for a Joomla extension.
+#
+# Copy this to .github/workflows/release.yml in your extension repo (alongside
+# build/build.sh). On a version tag (v*), it builds the installable extension
+# zip and attaches it to the GitHub Release so the package is downloadable and
+# reproducible. Tag a release with:
+#   git tag v1.0.0 && git push origin v1.0.0
+#
+# Part of the apexyard joomla-extension topology.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    name: Build + attach package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build extension package
+        run: bash build/build.sh
+
+      - name: Attach package to the release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
+          fail_on_unmatched_files: true

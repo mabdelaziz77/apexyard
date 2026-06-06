@@ -1,6 +1,6 @@
 # Topology: Joomla Extension (Component / Plugin / Module)
 
-**Version**: 1.1.0
+**Version**: 1.2.0
 **Stack**: PHP 8.2+ + Joomla 5.x / 6.x + PSR-12 + PHPStan + PHPUnit + Composer
 **Use this when**: building a Joomla extension (component, plugin, module, or package) that follows the Joomla MVC pattern, uses the DI container, and targets Joomla 5 or 6.
 
@@ -14,6 +14,8 @@ Pick this topology in `/handover` and the skill instantiates:
 | Language handbooks | `strict-typing.md`, `psr12-style.md`, `namespace-autoloading.md` | `handbooks/language/php/` |
 | Domain handbooks | `joomla-di/service-provider.md`, `joomla-security/input-output-safety.md`, `joomla-db/query-builder-safety.md`, `joomla-i18n/language-and-translation.md`, `joomla-jed/jed-listing-readiness.md` | `handbooks/domain/<area>/` (each has `paths:` frontmatter) |
 | CI pipeline | `joomla-ci.yml` (PHP-CS-Fixer + PHPStan + PHPUnit + extension package build + `jed-readiness` proxy job) | `.github/workflows/` |
+| Release packaging | `build.sh` (manifest-driven package builder) + `release.yml` (tag → build + attach asset) | `build/build.sh` + `.github/workflows/release.yml` |
+| JED submission template | `jed-submission.md` (the JED listing form metadata, fill-in-the-blanks) | `docs/jed-submission.md` |
 | AgDR template | `agdr-joomla-extension.md` (extension type, namespace, DB strategy, auth prompts) | `docs/agdr/agdr-joomla-extension.draft.md` |
 
 ## Why pick this topology
@@ -63,7 +65,10 @@ joomla-extension/
 │       └── joomla-jed/
 │           └── jed-listing-readiness.md                     ← paths: **/*.php, **/*.xml, **/*.ini
 ├── golden-paths/
-│   └── joomla-ci.yml                                        ← incl. jed-readiness proxy job
+│   ├── joomla-ci.yml                                        ← incl. jed-readiness proxy job
+│   ├── build.sh                                             ← → build/build.sh (package builder)
+│   └── release.yml                                          ← → .github/workflows/ (tag → release asset)
 └── templates/
-    └── agdr-joomla-extension.md
+    ├── agdr-joomla-extension.md
+    └── jed-submission.md                                    ← → docs/jed-submission.md (JED listing metadata)
 ```
