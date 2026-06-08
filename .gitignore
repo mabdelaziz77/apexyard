@@ -51,3 +51,8 @@ apexyard.projects.yaml
 projects
 onboarding.yaml
 workspace
+
+# Fork-local automation hook wired via .claude/settings.local.json (not upstream
+# settings.json). Kept local — adopter-specific, never on the public fork.
+# (build-before-approval: rebuilds a project's installable artifact on `gh pr create`.)
+.claude/hooks/build-package-on-pr-create.sh

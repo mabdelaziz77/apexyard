@@ -52,7 +52,7 @@ The Path resolution section's example sources the helper *once* for documentatio
 /handover marketing-site --topology typescript-nextjs
 ```
 
-The `--topology <name>` flag pre-selects a topology bundle and skips the interactive pick in step 1.5. Available topologies: `typescript-nextjs`, `python-fastapi`, `go-data-pipeline` (framework-curated v1), and `joomla-extension` (fork-local — see AgDR-0053). See [`topologies/README.md`](../../../topologies/README.md) and AgDR-0048.
+The `--topology <name>` flag pre-selects a topology bundle and skips the interactive pick in step 1.5. Available v1 topologies: `typescript-nextjs`, `python-fastapi`, `go-data-pipeline`. See [`topologies/README.md`](../../../topologies/README.md) and AgDR-0048.
 
 ## Output location
 
@@ -175,18 +175,17 @@ Which topology fits this project?
   [1] typescript-nextjs   — TypeScript + Next.js web app (App Router, Prisma, JWT)
   [2] python-fastapi      — Python + FastAPI service (Pydantic v2, SQLAlchemy async, JWT)
   [3] go-data-pipeline    — Go batch / streaming pipeline (no HTTP surface)
-  [4] joomla-extension    — PHP + Joomla 5–6 extension (component / plugin / module)
-  [5] Skip / custom       — no topology bundle; use the framework defaults
+  [4] Skip / custom       — no topology bundle; use the framework defaults
 
 Read topologies/<name>/README.md for what each bundle includes.
 
-[1/2/3/4/5 — default 5]
+[1/2/3/4 — default 4]
 ```
 
 **Branching:**
 
-- **Pick 1/2/3/4:** record the topology name in `$PICKED_TOPOLOGY` (e.g. `typescript-nextjs`). Verify the topology dir exists at `<ops_root>/topologies/<name>/`. If missing (e.g. operator on an older framework version), print `⚠ topology dir not found — falling back to no bundle` and continue with `$PICKED_TOPOLOGY=""`.
-- **Pick 5 / default / any other input:** set `$PICKED_TOPOLOGY=""`. Continue exactly as the pre-topology flow.
+- **Pick 1/2/3:** record the topology name in `$PICKED_TOPOLOGY` (e.g. `typescript-nextjs`). Verify the topology dir exists at `<ops_root>/topologies/<name>/`. If missing (e.g. operator on an older framework version), print `⚠ topology dir not found — falling back to no bundle` and continue with `$PICKED_TOPOLOGY=""`.
+- **Pick 4 / default / any other input:** set `$PICKED_TOPOLOGY=""`. Continue exactly as the pre-topology flow.
 
 **Verifying the pick.** Read the topology's `README.md` and `VERSION` files. Print a one-line confirmation:
 
@@ -1071,7 +1070,7 @@ Filed follow-up tickets:
 11. **Never overwrite the architecture stub** — `projects/<name>/architecture/container.md` is written once on first handover, then owned by the team. Re-runs of `/handover` (e.g. if the tech stack changed) must preserve any manual refinements. If you want to regenerate, the user deletes the file first.
 12. **Architecture stubs are starting points, not truths** — the auto-generated note at the top of the file explicitly tells the user to review and refine. Never claim the detector is authoritative.
 13. **Topology instantiation never overwrites** — step 5.5 copies files with `rsync --ignore-existing` / `cp -n`. Adopters who edited a topology handbook keep their edits across re-runs. Drift detection lives in `/update` (see AgDR-0048).
-14. **Default is no topology** — pick 5 (Skip / custom) is the default. The pre-topology flow is byte-for-byte preserved for adopters who don't want a bundle. Never auto-pick a topology based on tech-stack detection in v1 — let the operator choose.
+14. **Default is no topology** — pick 4 (Skip / custom) is the default. The pre-topology flow is byte-for-byte preserved for adopters who don't want a bundle. Never auto-pick a topology based on tech-stack detection in v1 — let the operator choose.
 15. **Next-step tickets are opt-in, never auto-filed** — step 7.5 always prompts the operator before any `gh issue create`. Bulk shapes (`all` / `none` / comma-list) are conveniences, not defaults. `none` and empty input are equivalent — skip-all is the safe default if the operator's intent is unclear.
 16. **The routing heuristic is the default, not the law** — step 7.5's auto-route from next-step shape to `/feature` / `/task` / `/bug` is a sensible default. The operator can override per item (`1 as feature` / `3 as bug`). When in doubt, default to `/task` — handover-derived next-steps are almost never user-facing capabilities (`/feature` shape) and rarely strictly broken behaviour (`/bug` shape).
 17. **Source-link every filed ticket back to the assessment** — each ticket dispatched in step 7.5 carries a `_Source: handover deep-dive on YYYY-MM-DD — see projects/<name>/handover-assessment.md_` footer. Without that link, the assessment's context (risks, harnessability score, build status) is invisible to anyone working the ticket later, and the recommendation traceability rot is exactly the failure mode this step exists to prevent.
