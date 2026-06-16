@@ -309,6 +309,13 @@ ux designer|roles/design/ux-designer.md
 head of data|roles/data/head-of-data.md
 data analyst|roles/data/data-analyst.md
 data engineer|roles/data/data-engineer.md
+head of marketing|roles/marketing/head-of-marketing.md
+growth marketer|roles/marketing/growth-marketer.md
+content & seo marketer|roles/marketing/content-marketer.md
+content marketer|roles/marketing/content-marketer.md
+seo marketer|roles/marketing/content-marketer.md
+lifecycle marketer|roles/marketing/lifecycle-marketer.md
+email marketer|roles/marketing/lifecycle-marketer.md
 '
 
 detect_prompt_triggers() {
