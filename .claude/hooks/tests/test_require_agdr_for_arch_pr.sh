@@ -65,7 +65,13 @@ run_case() {
   local stderr_file
   stderr_file=$(mktemp)
 
-  ( cd "$dir" && echo "$(make_payload "$cmd")" | "$HOOK" ) 2> "$stderr_file"
+  # Isolate from the ambient Claude session: APEXYARD_OPS_DISABLE_PIN=1 forces
+  # the hook's ops-root resolver to walk up from the fixture repo instead of
+  # honouring a pinned real ops root, and an empty CLAUDE_CODE_SESSION_ID stops
+  # any pin lookup. Without this, the spike-marker fixture reads the developer's
+  # real .claude/session/current-ticket instead of the fixture's.
+  ( cd "$dir" && echo "$(make_payload "$cmd")" \
+      | APEXYARD_OPS_DISABLE_PIN=1 CLAUDE_CODE_SESSION_ID= "$HOOK" ) 2> "$stderr_file"
   local actual_exit=$?
   local stderr_content
   stderr_content=$(cat "$stderr_file")
@@ -315,6 +321,83 @@ DIR=$(setup_repo c1_base c1_feat)
 run_case "embedded quote, no AgDR ref at all → still BLOCKS (true-negative) [#461-C]" \
   "$DIR" 2 "no AgDR reference" \
   "gh pr create --base main --title 'feat(#3): tweak domain' --body 'Uses \"greedy\" matching but forgot to add the decision record.'"
+
+# ---------------------------------------------------------------------------
+# Fork base-resolution (apexyard#11) — the PR's base must resolve against the
+# target remote (origin), NOT an ancient upstream merge-base.
+#
+# Reproduces the split-portfolio fork shape:
+#   - upstream/main = ancient commit (before the fork diverged)
+#   - origin/main   = recent commit that already contains an arch-trigger file
+#                     (.github/workflows/ci.yml) — part of the fork, NOT the PR
+#   - feature branch off origin/main changes only a non-arch file (CHANGELOG.md)
+#
+# Buggy (upstream-first): merge-base(HEAD, upstream/main) is ancient → the diff
+# includes .github/workflows/ci.yml → false BLOCK (exit 2).
+# Fixed (origin / --repo target first): base = origin/main → diff is just
+# CHANGELOG.md → no arch trigger → PASS (exit 0).
+# ---------------------------------------------------------------------------
+fork_divergence_setup() {
+  local dir
+  dir=$(mktemp -d -t agdr-pr.XXXXXX)
+  (
+    cd "$dir" || exit 1
+    git init -q -b main
+    git config user.email t@t.test
+    git config user.name test
+    echo "company: test" > onboarding.yaml
+    git add onboarding.yaml
+    git commit -q -m init
+    # Pretend remotes: origin = the fork (PR target), upstream = me2resh.
+    git remote add origin https://github.com/test/fork.git
+    git remote add upstream https://github.com/test/upstream.git
+    # upstream/main pins the ancient pre-divergence commit.
+    git update-ref refs/remotes/upstream/main HEAD
+    # Fork divergence: an arch-trigger file lands on main (NOT in the PR).
+    mkdir -p .github/workflows
+    echo "name: ci" > .github/workflows/ci.yml
+    git add .github/workflows/ci.yml
+    git commit -q -m "fork: add ci workflow"
+    git update-ref refs/remotes/origin/main HEAD
+    # The actual PR: a non-arch change off the recent origin/main.
+    git checkout -q -b feature
+    echo "# changelog" > CHANGELOG.md
+    git add CHANGELOG.md
+    git commit -q -m "feat: changelog"
+  )
+  echo "$dir"
+}
+
+DIR=$(fork_divergence_setup)
+run_case "fork: --repo maps base to origin, ignores ancient upstream → PASS" \
+  "$DIR" 0 "" \
+  "gh pr create --repo test/fork --base main --title 'docs(#11): changelog' --body 'no arch change here'"
+
+# Same fixture, no --repo: origin-before-upstream precedence must still win.
+DIR=$(fork_divergence_setup)
+run_case "fork: origin preferred over upstream even without --repo → PASS" \
+  "$DIR" 0 "" \
+  "gh pr create --base main --title 'docs(#11): changelog' --body 'no arch change here'"
+
+# Guard against over-correction: a genuine arch change on the feature branch
+# (off origin/main) must STILL block when there's no AgDR.
+fork_real_arch_setup() {
+  local dir
+  dir=$(fork_divergence_setup)
+  (
+    cd "$dir" || exit 1
+    mkdir -p src/domain
+    echo "export const y = 1" > src/domain/svc.ts
+    git add src/domain/svc.ts
+    git commit -q -m "feat: real domain change"
+  )
+  echo "$dir"
+}
+
+DIR=$(fork_real_arch_setup)
+run_case "fork: genuine arch change on feature branch, no AgDR → BLOCK" \
+  "$DIR" 2 "no AgDR reference" \
+  "gh pr create --repo test/fork --base main --title 'feat(#11): domain' --body 'no decision recorded'"
 
 # ---------------------------------------------------------------------------
 # Result
