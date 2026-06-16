@@ -51,6 +51,7 @@ Each role has a **persona name** — a short identifier used in conversation, PR
 | Design | Maha (Head), Nour (UI Designer), Iman (UX Designer) | `roles/design/` |
 | Security | Faisal (Head), Hakim (Security Auditor), Hamza (Pen Tester) | `roles/security/` |
 | Data | Khalil (Head), Nadia (Data Analyst), Anwar (Data Engineer) | `roles/data/` |
+| Marketing | Rashid (Head), Layla (Growth), Samir (Content & SEO), Dalia (Lifecycle) | `roles/marketing/` |
 
 ### Activation — roles are first-class participants, not reference docs
 
@@ -196,11 +197,11 @@ ApexYard ships with a `.claude/` directory containing the Claude Code primitives
 | Hooks | `.claude/hooks/` | 24 shell scripts that mechanically enforce SDLC rules — ticket-first (Edit/Write/Bash), migration-ticket-first, auto code review, merge gates (Rex + CEO + design review), red-CI block, commit format, AgDR for arch changes, branch/PR-title validation, secrets scanning, upstream-drift banner, leak protection, bootstrap-skill exemption |
 | Rules | `.claude/rules/` | 11 modular rule files (AgDR triggers, code standards, git conventions, leak protection, parallel work, plan mode, PR quality, PR workflow, role triggers, ticket vocabulary, workflow gates) |
 | Handbooks | `handbooks/` | Adopter-authored coding standards consumed by Rex during code review. Discovery by path-convention (`architecture/` + `general/` always-load; `language/<lang>/` loads on diff-match). Advisory by default; opt in to blocking via `ENFORCEMENT: blocking` marker. See [`handbooks/README.md`](handbooks/README.md). |
-| Agents | `.claude/agents/` | 23 sub-agents (5 utility incl. Hakim post-consolidation + 7 engineering + 6 product-design + 5 security-data). Per AgDR-0050 + the #347 PR 3 Hatim→Hakim consolidation decision. |
-| Skills | `.claude/skills/` | 54 slash commands — see the full list below |
+| Agents | `.claude/agents/` | 27 sub-agents (5 utility incl. Hakim post-consolidation + 7 engineering + 6 product-design + 5 security-data + 4 marketing). Per AgDR-0050, the #347 PR 3 Hatim→Hakim consolidation decision, and AgDR-0053 (marketing department). |
+| Skills | `.claude/skills/` | 58 slash commands — see the full list below |
 | Settings | `.claude/settings.json` | Wires hooks to `PreToolUse`, `PostToolUse`, and `SessionStart` events |
 
-### Available skills (54)
+### Available skills (58)
 
 One-line summary per skill; canonical details live in each `.claude/skills/<name>/SKILL.md`.
 
@@ -259,6 +260,10 @@ One-line summary per skill; canonical details live in each `.claude/skills/<name
 | `/tasks` | Actionable task list across the portfolio with direct URLs, prioritised |
 | `/roadmap` | Update or create the product roadmap |
 | `/stakeholder-update` | Generate weekly / monthly / launch stakeholder updates |
+| `/release-sync` | Sync main back to dev after a squash-merge release — files a PR making the release commit an ancestor of dev |
+| `/gtm-plan` | Go-to-market & launch plan — segment, positioning, channel mix, funnel targets, calendar (Marketing) |
+| `/campaign-brief` | Single-channel campaign brief — objective, audience, message, assets, budget, success metric (Marketing) |
+| `/listing-audit` | App-directory / JED listing optimization — title, description, keywords, media, social proof (Marketing) |
 | `/fan-out` | Spawn N parallel agents in one message (per-task agent type, worktree isolation) |
 
 The hooks, agents, and skills are picked up automatically by Claude Code when this directory lives at the project root. The rules are imported via `@.claude/rules/*.md` from your project's `CLAUDE.md`.
@@ -296,7 +301,7 @@ Copy whichever you need into your project's `.github/workflows/`. Full details i
 | Rules (modular, framework-wide) | `.claude/rules/` |
 | **Adopter handbooks** (consumed by Rex during code review) | `handbooks/` — see [`handbooks/README.md`](handbooks/README.md) for the discovery + advisory/blocking conventions |
 | Agents | `.claude/agents/` |
-| Skills (54 slash commands) | `.claude/skills/` |
+| Skills (58 slash commands) | `.claude/skills/` |
 | Hook wiring | `.claude/settings.json` |
 | **Per-project docs** | `projects/<name>/` |
 | **Live working copies** (gitignored) | `workspace/<name>/` |

@@ -1,6 +1,6 @@
 # Role Triggers — When to Activate Which Role
 
-ApexYard ships **19 role definitions** in `roles/{department}/`. They are not all loaded into every session (context efficiency — 19 files × ~120 lines averages out to ~22k tokens, most of which are idle during any given task). Instead, a role is **activated** when a specific condition is met: you read the role file, adopt its identity, responsibilities, and constraints for the duration of the task, then hand off to the next role in the chain.
+ApexYard ships **23 role definitions** in `roles/{department}/`. They are not all loaded into every session (context efficiency — 23 files × ~120 lines averages out to ~27k tokens, most of which are idle during any given task). Instead, a role is **activated** when a specific condition is met: you read the role file, adopt its identity, responsibilities, and constraints for the duration of the task, then hand off to the next role in the chain.
 
 ## Activation Table
 
@@ -25,6 +25,10 @@ ApexYard ships **19 role definitions** in `roles/{department}/`. They are not al
 | **Head of Data** | `roles/data/head-of-data.md` | Analytics strategy · data governance · reporting architecture · cross-project data modelling |
 | **Data Analyst** | `roles/data/data-analyst.md` | SQL queries · dashboards · A/B-test analysis · metric investigation |
 | **Data Engineer** | `roles/data/data-engineer.md` | ETL pipelines · data modelling · data-quality work · warehouse schema changes |
+| **Head of Marketing** | `roles/marketing/head-of-marketing.md` | Go-to-market / launch strategy · positioning · channel-mix + budget call · cross-project brand decision |
+| **Growth Marketer** | `roles/marketing/growth-marketer.md` | Acquisition funnel · landing page / ad copy · paid/organic experiment · launch execution · conversion optimization |
+| **Content & SEO Marketer** | `roles/marketing/content-marketer.md` | Content / copywriting · on-page SEO / GEO · social · docs-as-marketing · app-directory listing |
+| **Lifecycle Marketer** | `roles/marketing/lifecycle-marketer.md` | Onboarding sequence · email / newsletter · retention / win-back campaign · lifecycle segmentation |
 
 ## Activation Protocol
 
@@ -87,6 +91,10 @@ This is a **prose convention**, not a mechanically-enforced format. The sibling 
 | Roadmap question or prioritization call | Head of Product |
 | User flow / wireframe / IA question | UX Designer |
 | Component spec / design tokens question | UI Designer |
+| Launch / go-to-market / positioning planning | Head of Marketing |
+| Landing page / ad copy / acquisition campaign | Growth Marketer |
+| Blog / content / SEO copy / app-directory listing | Content & SEO Marketer |
+| Email / newsletter / onboarding sequence / retention campaign | Lifecycle Marketer |
 | Cross-project strategy question | The relevant Head of _ role |
 
 **Prompted activation** — the user explicitly asks for a role:
@@ -95,6 +103,7 @@ This is a **prose convention**, not a mechanically-enforced format. The sibling 
 "Act as the QA Engineer and verify ticket #42"
 "Put on your Tech Lead hat and review this PR"
 "As the Security Auditor, check this PR for OWASP issues"
+"Act as the Head of Marketing and draft a go-to-market plan"
 ```
 
 Both forms result in the role file being read and the role being embodied for the task.
@@ -125,10 +134,14 @@ Roles deliver concrete artefacts at each handoff point. These are the contracts 
 | Security Auditor → Tech Lead | Security findings + required fixes |
 | QA Engineer → Product Manager | AC verification sign-off |
 | Platform Engineer → SRE | Production deployment + runbook |
+| Product Manager → Head of Marketing | Approved PRD + launch request |
+| Head of Marketing → Growth Marketer | GTM strategy + channel plan + budget |
+| Growth Marketer → Content & SEO Marketer | Campaign brief (assets needed) |
+| Content & SEO Marketer → Lifecycle Marketer | Content assets for email + newsletters |
 
 ## Aspirational → Real
 
-Before this rule existed, the 19 role files were passive markdown docs — no trigger, no activation, no automatic reference from workflows or skills. A user had to manually say *"please read `roles/engineering/qa-engineer.md` and act as the QA Engineer"* for anything to happen.
+Before this rule existed, the role files were passive markdown docs — no trigger, no activation, no automatic reference from workflows or skills. A user had to manually say *"please read `roles/engineering/qa-engineer.md` and act as the QA Engineer"* for anything to happen.
 
 This file closes that gap. When in a Claude Code session under apexyard, the trigger table drives which role activates, and the workflow and skill files now explicitly reference the role files at every phase boundary. Roles are now **first-class participants** in the SDLC, not reference material.
 
@@ -142,8 +155,8 @@ Same advisory shape as `check-upstream-drift.sh` — non-blocking, exit 0 always
 
 Each banner reads the matched role's `**Class**:` value from the `## Activation mode` section of the role file and emits one of two shapes:
 
-- **Isolated-work-class** (12 roles: Heads-of-X, Tech Lead, QA Engineer, SRE, Security Auditor, Pen Tester, Product Analyst, Data Analyst): the banner instructs the agent to **SPAWN the sub-agent via the Agent tool** with `subagent_type: <slug>`, naming both the canonical role file at `roles/<dept>/<role>.md` and the agent wrapper at `.claude/agents/<slug>.md`. Per AgDR-0050 § Axis 6, isolated work benefits from isolated context + tool restriction.
-- **In-flow-class** (7 roles: Backend / Frontend / Platform Engineer, Product Manager, UI / UX Designer, Data Engineer): the banner instructs the agent to **adopt the persona IN-THREAD** by reading `roles/<dept>/<role>.md`. Per AgDR-0050 § Axis 6, in-flow work loses too much shared context if spawned out-of-thread.
+- **Isolated-work-class** (13 roles: Heads-of-X incl. Head of Marketing, Tech Lead, QA Engineer, SRE, Security Auditor, Pen Tester, Product Analyst, Data Analyst): the banner instructs the agent to **SPAWN the sub-agent via the Agent tool** with `subagent_type: <slug>`, naming both the canonical role file at `roles/<dept>/<role>.md` and the agent wrapper at `.claude/agents/<slug>.md`. Per AgDR-0050 § Axis 6, isolated work benefits from isolated context + tool restriction.
+- **In-flow-class** (10 roles: Backend / Frontend / Platform Engineer, Product Manager, UI / UX Designer, Data Engineer, Growth Marketer, Content & SEO Marketer, Lifecycle Marketer): the banner instructs the agent to **adopt the persona IN-THREAD** by reading `roles/<dept>/<role>.md`. Per AgDR-0050 § Axis 6, in-flow work loses too much shared context if spawned out-of-thread.
 
 One naming exception: the Security Auditor role (`roles/security/security-auditor.md`) maps to the `security-reviewer` agent slug, not `security-auditor`. This is the Hatim→Hakim consolidation from PR #360 — the agent filename was preserved so `/security-review` and the auto-fire trigger keep working. The hook handles the exception via `agent_slug_for()`.
 
