@@ -267,6 +267,40 @@ in=$(jq -nc \
 run_case "hybrid class-aware: Pen Tester prompted → isolated-work-class banner" 0 \
   "Pen Tester.*Isolated-work-class.*subagent_type: penetration-tester" "$in"
 
+# --- (5) Marketing department — AgDR-0053 ------------------------------------
+# Prompted activation for the four marketing roles. Head of Marketing is
+# isolated-work-class (SPAWN); Growth / Content & SEO / Lifecycle are
+# in-flow-class (adopt in-thread).
+
+# 5a. Head of Marketing (isolated-work-class) — SPAWN with
+#     subagent_type: head-of-marketing.
+in=$(jq -nc \
+  --arg prm "act as the head of marketing and draft a go-to-market plan" \
+  '{hook_event_name:"UserPromptSubmit", prompt:$prm}')
+run_case "marketing: Head of Marketing prompted → isolated-work-class banner" 0 \
+  "Head Of Marketing.*Isolated-work-class.*subagent_type: head-of-marketing" "$in"
+
+# 5b. Growth Marketer (in-flow-class) — adopt in-thread.
+in=$(jq -nc \
+  --arg prm "as the growth marketer, build the launch funnel" \
+  '{hook_event_name:"UserPromptSubmit", prompt:$prm}')
+run_case "marketing: Growth Marketer prompted → in-flow-class banner" 0 \
+  "Growth Marketer.*In-flow-class.*adopt the persona IN-THREAD" "$in"
+
+# 5c. Content & SEO Marketer (in-flow-class) via the "content marketer" alias.
+in=$(jq -nc \
+  --arg prm "act as the content marketer and rewrite the listing copy" \
+  '{hook_event_name:"UserPromptSubmit", prompt:$prm}')
+run_case "marketing: Content Marketer prompted → in-flow-class banner" 0 \
+  "Content Marketer.*In-flow-class.*adopt the persona IN-THREAD" "$in"
+
+# 5d. Lifecycle Marketer (in-flow-class) — adopt in-thread.
+in=$(jq -nc \
+  --arg prm "put on your lifecycle marketer hat for the onboarding emails" \
+  '{hook_event_name:"UserPromptSubmit", prompt:$prm}')
+run_case "marketing: Lifecycle Marketer prompted → in-flow-class banner" 0 \
+  "Lifecycle Marketer.*In-flow-class.*adopt the persona IN-THREAD" "$in"
+
 # --- Summary -----------------------------------------------------------------
 
 echo ""
