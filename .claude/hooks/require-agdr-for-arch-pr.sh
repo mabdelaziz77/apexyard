@@ -14,8 +14,13 @@
 #
 # Behaviour:
 #   - Matches ONLY on `gh pr create …`. Silent no-op on other commands.
-#   - Computes the diff vs the base branch (parsed from --base; falls back
-#     to `upstream/dev`, `origin/dev`, `upstream/main`, `origin/main`).
+#   - Computes the diff vs the base branch. The base ref is resolved against
+#     the remote the PR actually TARGETS (parsed from `--repo`), then `origin`,
+#     then `upstream`. Resolving `upstream` first was a bug (apexyard#11): on a
+#     fork whose history was replayed onto upstream, `merge-base(HEAD,
+#     upstream/main)` is ancient, so the diff dragged in the fork's entire
+#     divergence and false-blocked every PR. The PR targets `origin` (the fork),
+#     so `origin/<base>` is the correct base.
 #   - Config via .claude/project-config.defaults.json (shallow-merged with
 #     .claude/project-config.json):
 #       .agdr_trigger_paths       → list of shell globs (case-style patterns)
@@ -198,6 +203,7 @@ fi
 # ---------------------------------------------------------------------------
 
 BASE_ARG=$(extract_flag_value '--base|-B' "$COMMAND")
+REPO_ARG=$(extract_flag_value '--repo|-R' "$COMMAND")
 BASE_REF=""
 
 resolve_ref() {
@@ -208,16 +214,50 @@ resolve_ref() {
   fi
 }
 
+remote_for_repo() {
+  # Map a `--repo owner/name` value to the local remote whose fetch URL points
+  # at it (handles git@host: and https:// forms, optional .git suffix). Echoes
+  # the remote name (e.g. "origin") or nothing. This is what makes the diff
+  # base track the PR's actual target repo rather than a drifted upstream.
+  local want="$1"
+  [ -z "$want" ] && return 0
+  local line name url norm
+  while IFS= read -r line; do
+    [ -z "$line" ] && continue
+    name=${line%%[[:space:]]*}
+    url=$(printf '%s' "$line" | awk '{print $2}')
+    norm=$(printf '%s' "$url" | sed -E 's#^git@[^:]+:#https://x/#; s#\.git$##; s#/+$##')
+    case "$norm" in
+      *"/$want") printf '%s\n' "$name"; return 0 ;;
+    esac
+  done <<EOF
+$(git remote -v 2>/dev/null | grep '(fetch)')
+EOF
+}
+
+TARGET_REMOTE=$(remote_for_repo "$REPO_ARG")
+
+# Precedence: the PR's target remote (from --repo) → origin → upstream → bare.
+# origin BEFORE upstream is load-bearing — see the apexyard#11 note in the
+# header. No ref name contains whitespace, so a space-joined list is safe.
 if [ -n "$BASE_ARG" ]; then
-  # Try upstream/<arg>, origin/<arg>, <arg> in that order.
-  for candidate in "upstream/$BASE_ARG" "origin/$BASE_ARG" "$BASE_ARG"; do
+  candidates=""
+  [ -n "$TARGET_REMOTE" ] && candidates="$TARGET_REMOTE/$BASE_ARG "
+  candidates="${candidates}origin/$BASE_ARG upstream/$BASE_ARG $BASE_ARG"
+  for candidate in $candidates; do
     r=$(resolve_ref "$candidate")
     if [ -n "$r" ]; then BASE_REF="$r"; break; fi
   done
 fi
 
 if [ -z "$BASE_REF" ]; then
-  for candidate in upstream/dev origin/dev upstream/main origin/main main master; do
+  # No --base: fall back to integration branches. dev before main preserves the
+  # upstream framework's release-cut flow; target-remote + origin still win over
+  # upstream so a fork doesn't diff against an ancient upstream merge-base.
+  candidates=""
+  [ -n "$TARGET_REMOTE" ] && candidates="$TARGET_REMOTE/dev $TARGET_REMOTE/main $TARGET_REMOTE/master "
+  candidates="${candidates}origin/dev origin/main upstream/dev upstream/main main master"
+  for candidate in $candidates; do
     r=$(resolve_ref "$candidate")
     if [ -n "$r" ]; then BASE_REF="$r"; break; fi
   done
