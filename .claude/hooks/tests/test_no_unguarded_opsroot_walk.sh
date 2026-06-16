@@ -36,18 +36,25 @@ SELF=$(basename "$0")
 FAIL=0
 HITS=""
 
+# Collect every line that strips a path segment with `${r%/*}`. `-F` keeps the
+# pattern a literal fixed string (no BRE end-of-line surprises from the `$`),
+# and capturing into a variable keeps the pattern out of any heredoc that would
+# re-expand `${r%/*}` before grep ever sees it.
+matches=$(grep -rn --include='*.md' --include='*.sh' -F 'r=${r%/*}' \
+  "$ROOT/.claude/skills" "$ROOT/.claude/hooks" 2>/dev/null || true)
+
+# Here-string (not a heredoc): "$matches" is substituted once and fed literally,
+# so a matched buggy line containing `${r%/*}` / `$PWD` isn't re-expanded.
 while IFS= read -r line; do
   [ -z "$line" ] && continue
   # line is "file:lineno:content". Exempt this test file's own examples.
   case "$line" in *"$SELF"*) continue ;; esac
-  # Safe iff the same line also carries the `[ -n "$r" ]` empty-string guard.
-  if ! printf '%s' "$line" | grep -q -- '-n "\$'; then
+  # Safe iff the same line also carries a `[ -n "$r" ]` empty-string guard.
+  if ! printf '%s' "$line" | grep -qF -- '-n "$'; then
     HITS="${HITS}${line}
 "
   fi
-done <<EOF
-$(grep -rn --include='*.md' --include='*.sh' 'r=${r%/\*}' "$ROOT/.claude/skills" "$ROOT/.claude/hooks" 2>/dev/null || true)
-EOF
+done <<< "$matches"
 
 if [ -n "$HITS" ]; then
   echo "FAIL: unguarded \${r%/*} ops-root strip-walk found (apexyard#12)." >&2
