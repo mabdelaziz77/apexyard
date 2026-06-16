@@ -38,7 +38,10 @@ Defaults match today's single-fork layout (`./apexyard.projects.yaml`, `./projec
 Before any `gh issue create` (or other tracker CLI), write this skill's name to the active-issue-skill marker so `require-skill-for-issue-create.sh` lets the command through. At skill entry:
 
 ```bash
-ops_root="$(r=$PWD;while [ ! -f \"$r/onboarding.yaml\" ] && [ \"$r\" != / ];do r=${r%/*};done;echo $r)"
+# Resolve the ops fork root via the shared, split-portfolio-aware resolver
+# (honours the .apexyard-fork marker + session pin; never infinite-loops). See #12.
+source "$(git rev-parse --show-toplevel)/.claude/hooks/_lib-ops-root.sh"
+ops_root="$(resolve_ops_root)"
 mkdir -p "$ops_root/.claude/session"
 echo "spike" > "$ops_root/.claude/session/active-issue-skill"
 ```
