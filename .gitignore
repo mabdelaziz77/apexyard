@@ -57,3 +57,11 @@ apexyard.projects.yaml
 projects
 onboarding.yaml
 workspace
+
+# Fork-local hooks kept out of the public fork — adopter-specific, never
+# shipped upstream. (build-package: rebuilds a project's installable artifact
+# on `gh pr create`. no-ai-attribution: blocks Co-Authored-By: Claude /
+# "Generated with Claude Code" on any commit, PR, issue, or comment —
+# operator policy: sole authorship.)
+.claude/hooks/build-package-on-pr-create.sh
+.claude/hooks/block-ai-attribution.sh
