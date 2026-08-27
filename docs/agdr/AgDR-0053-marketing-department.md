@@ -73,8 +73,9 @@ in-flow): the strategic Head is isolated; the executing specialists are in-flow.
 
 ## Consequences
 
-- **Role count 19 → 23; agent count 23 → 27.** `CLAUDE.md` Departments table, the agent-layer count
-  + breakdown, and `role-triggers.md`'s "19 role definitions" references are updated. Skill count +3.
+- **Role count 19 → 23; agent count 23 → 27.** `CLAUDE.md` Departments table, the agent-layer
+  count and breakdown, and `role-triggers.md`'s "19 role definitions" references are updated.
+  Skill count +3.
 - **`detect-role-trigger.sh` gains prompted-activation aliases** for the four roles (head of
   marketing, growth marketer, content/seo marketer, lifecycle/email marketer). No new path- or
   label-based triggers — there is no canonical "marketing path" in a repo, so auto-firing on diffs
