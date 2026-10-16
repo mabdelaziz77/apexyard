@@ -10,6 +10,11 @@ INPUT=$(cat)
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)
 
 if [ -z "$COMMAND" ]; then
+  . "$(dirname "$0")/_lib-fail-closed-json.sh"
+  if raw_payload_command_matches "$INPUT" 'git[[:space:]]+push'; then
+    echo "BLOCKED: branch-name hook cannot parse this push command. Restore jq and retry." >&2
+    exit 2
+  fi
   exit 0
 fi
 
@@ -114,11 +119,15 @@ if [ -f "$HOOK_DIR/_lib-extract-push-ref.sh" ]; then
          || echo "$SEGMENT" | grep -qE 'refs/tags/'; then
         HAS_EVIDENCE=1
       fi
-      [ "$HAS_EVIDENCE" = "1" ] && continue
+      SEG_REF=""
       if declare -F _extract_push_ref_core > /dev/null 2>&1; then
         SEG_REF=$(_extract_push_ref_core "$SEGMENT")
-        [ -n "$SEG_REF" ] && SCAN_LAST_REF="$SEG_REF"
       fi
+      # Explicit ORBIT refs must reach the records command check (#1673).
+      if [ "$HAS_EVIDENCE" = "1" ]; then
+        case "$SEG_REF" in orbit/*) ;; *) continue ;; esac
+      fi
+      [ -n "$SEG_REF" ] && SCAN_LAST_REF="$SEG_REF"
     done < <(echo "$STRIPPED_FOR_SCAN" | grep -oE '\bgit\s+push\b[^|;&]*')
 
     if [ -z "$SCAN_LAST_REF" ]; then
@@ -252,6 +261,72 @@ fi
 # narrow, intentional exception to the {type}/{TICKET}-{desc} shape.
 if echo "$CURRENT_BRANCH" | grep -qE '^sync/main-to-dev-after-v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$'; then
   exit 0
+fi
+
+# Allow dependency-bot branches (me2resh/apexyard#1362). Dependabot and Renovate
+# name their own branches and cannot be told to use {type}/{TICKET}-{desc};
+# there is also no ticket to reference at the moment the bot opens the PR.
+# Without this, a maintainer cannot push anything to a bot branch — not even
+# the changelog fragment and ticket reference the repository's own gates demand
+# before the PR can merge — so the bot PR becomes unmergeable by construction.
+#
+# CI already made this call: .github/workflows/pr-title-check.yml exempts
+# `dependabot/`, `sync/` and `release/` head refs (#588), and states that its
+# pattern is "intentionally aligned with the local hooks ... so anything that
+# passes the hooks also passes this CI check". The hook exempted `sync/` and
+# `release/` but not the bot prefixes, so the two disagreed.
+#
+# Deliberately narrow: the prefixes are anchored and the rest of the name is
+# the bot's to choose. Human branches are unaffected, and every other gate
+# (ticket-first, secrets, commit format, the merge gates) still applies to
+# whatever is pushed. The exemption is about the branch NAME only.
+#
+# The trailing `[^/]` requires a non-empty first segment. A bare `dependabot/`
+# is not a ref git accepts, so exempting it would widen the surface for nothing.
+#
+# `.github/workflows/pr-title-check.yml` carries the same prefix list and the
+# same requirement. The two must stay in step (#1362): a prefix this hook
+# exempts but that check does not lets a bot PR pass the local push gate and
+# then fail CI on a title it was never going to carry.
+if echo "$CURRENT_BRANCH" | grep -qE '^(dependabot|renovate)/[^/]'; then
+  exit 0
+fi
+
+# Allow the two branches /handover prescribes for its opt-in writes INTO AN
+# ADOPTED REPO (me2resh/apexyard#1161). Steps 8.5 and 8.6 push `docs/agents-md`
+# (the generated AGENTS.md) and `docs/apexyard-badge` (the README badge) into
+# the target repo. Both are hardcoded in the skill, so the skill's own
+# prescribed branch could never satisfy this gate: /handover is bootstrap-class
+# and runs before the adopted repo has any tracker ticket to name, and the
+# adopted repo may have no tracker at all. Same narrow, intentional exception
+# as the release and sync branches above — the work itself is the ticket.
+#
+# The match is an exact literal on each of the two names, so this exempts
+# nothing else: a `docs/agents-md-v2` or any other `docs/*` branch still needs
+# a ticket-id. These branches also live in the ADOPTED repo, not the ops fork,
+# and land as a PR the repo owner reviews. See AgDR-0129.
+if echo "$CURRENT_BRANCH" | grep -qE '^docs/(agents-md|apexyard-badge)$'; then
+  exit 0
+fi
+
+# Exempt by NAME and content together. Fail closed (#1673).
+if [ -f "$HOOK_DIR/_lib-orbit-records.sh" ]; then
+  # shellcheck source=./_lib-orbit-records.sh
+  . "$HOOK_DIR/_lib-orbit-records.sh"
+  if orbit_records_branch_shape "$CURRENT_BRANCH"; then
+    if orbit_push_command_simple "$COMMAND" &&
+       orbit_records_only "${BRANCH_DIR:-.}" "$CURRENT_BRANCH" "$TRUNK_BRANCHES"; then
+      exit 0
+    fi
+    cat >&2 <<MSG
+BLOCKED: This branch uses the orbit/ records shape.
+Allow this shape only when every changed file is under docs/orbit/.
+${ORBIT_RECORDS_REASON}
+Use the normal shape {type}/{TICKET-ID}-{description}, such as feature/GH-45-add-thing.
+Run git fetch first when the base looks stale.
+MSG
+    exit 2
+  fi
 fi
 
 # Load the branch-type whitelist from project config.

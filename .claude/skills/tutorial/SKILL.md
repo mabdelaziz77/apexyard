@@ -7,6 +7,8 @@ effort: low
 allowed-tools: Read, Bash
 ---
 
+Writing: read docs/skills/shared/writing-rule.md before you write a durable artifact.
+
 # /tutorial — Replay the Capability Tour
 
 This is ticket #911 (M3) of the guided-onboarding walking skeleton (technical

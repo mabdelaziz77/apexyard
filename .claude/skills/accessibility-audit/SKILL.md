@@ -6,6 +6,8 @@ argument-hint: "[project-path]"
 effort: high
 ---
 
+Writing: read docs/skills/shared/writing-rule.md before you write a durable artifact.
+
 # /accessibility-audit — WCAG 2.2 AA Compliance
 
 Deep-dive accessibility analysis against the Web Content Accessibility Guidelines 2.2 Level AA. Produces a prioritized findings list with fix instructions. Invoke when `/launch-check`'s accessibility row shows WARN or FAIL, or proactively for any user-facing app.

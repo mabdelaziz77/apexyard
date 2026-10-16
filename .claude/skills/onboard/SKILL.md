@@ -4,8 +4,10 @@ description: "Guided first-run onboarding — capability tour, handover-vs-new-p
 disable-model-invocation: false
 argument-hint: ""
 effort: medium
-allowed-tools: Bash, Read, Write, Skill
+allowed-tools: Bash, Read, Write, Skill, AskUserQuestion
 ---
+
+Writing: read docs/skills/shared/writing-rule.md before you write a durable artifact.
 
 # /onboard — Guided First-Run Onboarding
 
@@ -59,6 +61,11 @@ registry=$(portfolio_registry)
 
 ## Process
 
+Use `AskUserQuestion` for every operator option menu in this skill. Follow `.claude/rules/reporting-style.md § Operator choices`.
+Preserve multiple selections where the menu permits them. Split menus with more than four options into sequential wizard questions.
+Keep single yes/no and ticket confirmation prompts as written.
+The prose menus below are fallbacks only when the harness lacks `AskUserQuestion`.
+
 ### 0. Mark this session as bootstrap (REQUIRED)
 
 `/onboard` runs before any portfolio is configured, so no project tickets
@@ -100,8 +107,9 @@ Branch on `$state`:
 
 - **`configured`** — the fork is already set up. Don't force the full
   first-run flow (that would re-run config bootstrap and the guided first
-  win on someone who's past that stage). Offer a lightweight re-run
-  instead:
+  win on someone who's past that stage). Use `AskUserQuestion` to offer a
+  lightweight re-run. Recommend `Nothing — exit` first. Use the menu below
+  only when the harness lacks the tool:
 
   ```
   This fork is already configured. Want to:
@@ -142,6 +150,10 @@ paraphrase or fork the prose here; both skills read the one shared file.
 Invoke the `Skill` tool with `skill: setup` to run the full config bootstrap
 (company info, tech stack, defaults). This is `/setup`'s Steps 2–7,
 unmodified — `/onboard` does not re-implement any of it.
+
+`/setup` Step 2e asks the status-band question: "Show the ApexYard status
+band above the prompt? (y/n)". On "y" it runs the two `--scope local`
+plugin commands. Do not ask the question a second time in `/onboard`.
 
 **Capture the technical-level signal (D5).** While `/setup`'s Step 2 asks
 "tell me about your company and tech stack," read that answer for how
@@ -345,6 +357,9 @@ becomes the folder name under projects/ and workspace/)
 
 **ii) Repo status**
 
+Use `AskUserQuestion` for repo status. Recommend the existing-repo option first when a repo exists.
+Otherwise recommend the greenfield option first. Use the menu below only without the tool.
+
 ```
 Does this project already have a GitHub repo?
   1. Yes — give me the owner/repo
@@ -488,3 +503,17 @@ re-run-offer exits, and on any decline/cancel path. Never leave it set.
 ---
 
 *Part of [ApexYard](https://github.com/me2resh/apexyard) — multi-project SDLC framework for Claude Code · MIT.*
+
+### Harness adapter reconciliation
+
+After a project is registered, reconcile its declared harness adapters before
+starting the first ticket. The registry entry may include `adapters: [codex,
+pi, opencode, cursor]`. Run the portfolio manager in install mode for the new
+project:
+
+```bash
+bash bin/manage-portfolio-adapters.sh --install --project "{name}"
+```
+
+The command delegates to the existing per-harness generators. It never copies
+or changes canonical `.claude/hooks/*.sh` logic.

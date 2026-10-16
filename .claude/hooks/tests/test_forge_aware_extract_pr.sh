@@ -22,6 +22,11 @@
 # Exit 0 = all pass. Exit 1 on first failure.
 
 set -u
+
+# Isolate from live Claude Code session pin/cache (me2resh/apexyard#1549).
+# shellcheck disable=SC1091
+. "$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)/_test-session-isolation.sh"
+
 unset APEXYARD_OPS_PIN_DIR CLAUDE_CODE_SESSION_ID 2>/dev/null || true
 
 HOOK_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -47,6 +52,7 @@ make_sandbox() {
   mkdir -p "$sb/.claude/hooks" "$sb/bin"
   touch "$sb/onboarding.yaml"
   cp "$EXTRACT_LIB"   "$sb/.claude/hooks/_lib-extract-pr.sh"
+  cp "$(dirname "$EXTRACT_LIB")/_lib-awk-fallback.sh" "$sb/.claude/hooks/_lib-awk-fallback.sh"
   cp "$TRACKER_LIB"   "$sb/.claude/hooks/_lib-tracker.sh"
   cp "$CONFIG_LIB"    "$sb/.claude/hooks/_lib-read-config.sh"
   cp "$PORTFOLIO_LIB" "$sb/.claude/hooks/_lib-portfolio-paths.sh"
@@ -233,6 +239,14 @@ assert_eq "extract_repo wrapper (bare, unquoted args)" "o/r" \
 assert_true  merge_command_uses_variable 'MERGE_RESULT=$(tracker_pr_merge "$REPO" "$PR" "squash" true)'
 assert_true  merge_command_uses_variable 'MERGE_RESULT=$(tracker_pr_merge "me2resh/apexyard" "$PR" "squash" true)'
 assert_false merge_command_uses_variable "$WRAPPER_CMD_REAL"
+
+# #1151: every gate now consumes resolve_merge_repo's single precedence.
+# A literal wrapper repo must win before the leading-cd heuristic is even
+# consulted; these stubs make any accidental cd lookup return the wrong repo.
+pr_cmd_cd_target() { echo "/wrong/ops"; }
+git_origin_repo() { echo "wrong/ops"; }
+assert_eq "#1151 explicit wrapper repo outranks cd-target" "me2resh/apexyard" \
+  "$(resolve_merge_repo "cd /wrong/ops && $WRAPPER_CMD_REAL")"
 
 # The wrapper form correctly resolves the FORGE via the registry (tracker_kind),
 # not the command text — this is the whole point of the wrapper: its own text

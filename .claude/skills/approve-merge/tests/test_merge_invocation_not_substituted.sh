@@ -45,6 +45,9 @@
 #      is actually wired, not just the top-level call in isolation
 #   6. The prose explicitly documents the "never wrap in $(...)" rule, so a
 #      human editing this file by hand still sees the warning inline
+#   7. Release metadata creation and the merge invocation occupy the same
+#      fenced bash block, so a harness cannot lose the values at a code-block
+#      boundary (#1196)
 #
 # Exit 0 if all cases pass; 1 on first failure.
 
@@ -130,6 +133,60 @@ if grep -qE 'NEVER be invoked.*\$\(|MUST be invoked.*top-level|never wrap.*\$\('
 else
   fail "SKILL.md prose documents the never-wrap-in-\$(...) rule inline"
 fi
+
+# --- Case 7: release metadata and merge call share one code block ----------
+# A fenced block can execute in a separate shell. The body-file variable is
+# therefore only safe when its creation and tracker_pr_merge use are in the
+# same block. Extract the block containing the merge invocation and require
+# both release assignments in it.
+MERGE_BLOCK=$(awk '
+  /^```bash[[:space:]]*$/ { inblock=1; block=""; next }
+  /^```[[:space:]]*$/ {
+    if (inblock && block ~ /tracker_pr_merge/) print block
+    inblock=0
+    next
+  }
+  inblock { block=block $0 "\n" }
+' "$SKILL_MD")
+
+if printf '%s' "$MERGE_BLOCK" | grep -qF 'RELEASE_SUBJECT=""' \
+  && printf '%s' "$MERGE_BLOCK" | grep -qF "RELEASE_BODY_FILE=\$(mktemp)" \
+  && printf '%s' "$MERGE_BLOCK" | grep -qE '^[[:space:]]*tracker_pr_merge\b'; then
+  pass "release metadata and tracker_pr_merge share one fenced bash block"
+else
+  fail "release metadata and tracker_pr_merge share one fenced bash block"
+fi
+
+# --- Case 8: /update sync shapes select the ancestry-preserving strategy ----
+# Sync-class detection lives in scripts/approve-merge.sh (steps 3a, 4, 6).
+SCRIPT="$SRC_ROOT/.claude/skills/approve-merge/scripts/approve-merge.sh"
+if [ -f "$SCRIPT" ] \
+  && grep -qF 'sync/main-to-dev-after-' "$SCRIPT" \
+  && grep -qF 'sync\(' "$SCRIPT" \
+  && grep -qF 'sync-upstream-(apexyard|dev)' "$SCRIPT" \
+  && grep -qF 'sync ops fork with upstream' "$SCRIPT" \
+  && grep -qF 'STRATEGY=merge' "$SCRIPT"; then
+  pass "/release-sync and /update sync branch and title shapes are classified as sync PRs"
+else
+  fail "/release-sync and /update sync branch and title shapes are classified as sync PRs"
+fi
+
+# --- Case 9: step 6 re-derives strategy and release class and stops ---------
+# Run the real step 6 block in a fresh shell, with MERGE_STRATEGY and
+# RELEASE_CLASS unset. A stub script prints a chosen result. The merge
+# adapter is a stub that writes a sentinel file when it runs (#1196).
+T9=$(mktemp -d)
+mkdir -p "$T9/home/.claude/skills/approve-merge/scripts" "$T9/home/.claude/hooks"
+printf '%s\n' 'tracker_pr_merge() { : > "$SENTINEL"; printf "{\"sha\":\"abc\"}"; }' > "$T9/home/.claude/hooks/_lib-tracker.sh"
+printf '%s\n' '#!/bin/bash' 'printf "%s\n" "$STUB_JSON"' > "$T9/home/.claude/skills/approve-merge/scripts/approve-merge.sh"
+printf '%s' "$MERGE_BLOCK" | sed -e "s|<marker_home>|$T9/home|g" -e 's|<repo>|owner/repo|g' -e 's|<pr>|42|g' > "$T9/block.sh"
+run9() { rm -f "$T9/sentinel"; env -u MERGE_STRATEGY -u RELEASE_CLASS SENTINEL="$T9/sentinel" STUB_JSON="$1" bash "$T9/block.sh" >/dev/null 2>&1; }
+OK9='{"marker_home":"x","pr_host_repo":"owner/repo","strategy":"squash","head_sha":"abc","release_class":false}'
+if run9 '{}' || [ -e "$T9/sentinel" ]; then fail "step 6 stops when strategy and release_class are missing"; else pass "step 6 stops when strategy and release_class are missing"; fi
+if run9 '{"pr_host_repo":"owner/repo","strategy":"fast-forward","release_class":false}' || [ -e "$T9/sentinel" ]; then fail "step 6 stops on an invalid strategy"; else pass "step 6 stops on an invalid strategy"; fi
+if run9 '{"pr_host_repo":"owner/repo","strategy":"squash"}' || [ -e "$T9/sentinel" ]; then fail "step 6 stops on a missing release_class"; else pass "step 6 stops on a missing release_class"; fi
+if run9 "$OK9" && [ -e "$T9/sentinel" ]; then pass "step 6 merges when the script result is valid"; else fail "step 6 merges when the script result is valid"; fi
+rm -rf "$T9"
 
 echo
 echo "PASS: $PASS  FAIL: $FAIL"
