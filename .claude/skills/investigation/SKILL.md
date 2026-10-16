@@ -7,6 +7,9 @@ allowed-tools: Bash, Read, Write
 
 # /investigation — Create an Investigation Ticket + Live-Doc
 
+Read `.claude/rules/writing-standard.md`. Use the **controlled technical writing profile** for the
+ticket and live document: state the outcome and next action first, then evidence.
+
 Creates a structured GitHub Issue + a sibling live-doc markdown file for an **investigation** — sustained root-cause work whose deliverable is a *written artefact* of what was observed, what we concluded, and what's next. Distinct from `/spike` (forward-looking hypothesis with a budget) and `/bug` (immediate-fix) — see the comparison block at the top of `templates/tickets/investigation.md`.
 
 > **When to use an investigation vs a bug vs a spike.** A `/bug` is filed when you already know what's broken and need to coordinate the fix. A `/spike` is filed when you want to test a forward-looking hypothesis ("will this approach work?") inside a time budget. An `/investigation` is filed when the *question itself* is the unknown — "why did this happen?", "what's actually going on with the metric drift?", "how does competitor X handle this?". The investigation produces a written record; the bug fix that may follow is a downstream artefact.
@@ -39,17 +42,8 @@ Defaults match today's single-fork layout (`./apexyard.projects.yaml`, `./projec
 Before any `gh issue create` (or other tracker CLI), write this skill's name to the active-issue-skill marker so `require-skill-for-issue-create.sh` lets the command through. At skill entry:
 
 ```bash
-# Resolve the ops-fork root the SAME way the hooks do (_lib-ops-root.sh):
-# anchor on the .apexyard-fork marker (split-portfolio v2 — onboarding.yaml
-# lives in the sibling portfolio repo, NOT the ops fork), falling back to the
-# onboarding.yaml + apexyard.projects.yaml pair (single-fork v1).
-ops_root="$PWD"; r="$PWD"
-while [ "$r" != / ]; do
-  if [ -f "$r/.apexyard-fork" ] || { [ -f "$r/onboarding.yaml" ] && [ -f "$r/apexyard.projects.yaml" ]; }; then
-    ops_root="$r"; break
-  fi
-  r=${r%/*}
-done
+# Ops root through the session pin (docs/skills/shared/ops-root.md).
+ops_root=$(p="${APEXYARD_OPS_PIN_DIR:-$HOME/.claude/apexyard}/ops-root-${CLAUDE_CODE_SESSION_ID:-}"; r=""; [ -z "${APEXYARD_OPS_DISABLE_PIN:-}" ] && [ -f "$p" ] && IFS= read -r r < "$p"; [ -f "$r/.claude/hooks/_lib-ops-root.sh" ] || { r="$PWD"; while [ -n "$r" ] && [ ! -f "$r/.claude/hooks/_lib-ops-root.sh" ]; do r=${r%/*}; done; }; [ -f "$r/.claude/hooks/_lib-ops-root.sh" ] && . "$r/.claude/hooks/_lib-ops-root.sh" && resolve_ops_root) && [ -n "$ops_root" ] || { echo "No ops root. See docs/skills/shared/ops-root.md." >&2; exit 1; }
 mkdir -p "$ops_root/.claude/session"
 echo "investigation" > "$ops_root/.claude/session/active-issue-skill"
 ```
@@ -64,7 +58,7 @@ The `clear-issue-skill-marker.sh` SessionStart hook sweeps stale markers from ki
 
 ### 1. Resolve the target project
 
-Read `.claude/session/current-ticket` to determine the active project context. Then:
+Read the active-ticket marker of the working tree you are in to determine the active project context. The marker is the `apexyard-ticket` file in the git dir of that tree. See `/start-ticket` "Read the active ticket". Then:
 
 ```bash
 source "$(git rev-parse --show-toplevel)/.claude/hooks/_lib-read-config.sh"

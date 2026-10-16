@@ -8,7 +8,7 @@ A credentialed pi session in headless mode (`pi -p -a`) issued a gated command d
 
 **How pi reaches the gate:** like opencode, pi exposes an **imperative extension API** — the dispatcher registers on pi's `tool_call` event, so the gate runs inside the real turn. Its precondition for enforcement is headless `-a`/`--approve` (project trust, so the tool call reaches the handler) — the pi analog of opencode's `--auto` and Codex's hook-trust. Every apexyard adapter enforces in headless once its precondition is met; Cursor is the one exception (see the [harness index](README.md#support-matrix)).
 
-apexyard's governance was built for Claude Code first: `CLAUDE.md` is auto-loaded at session start, `.claude/hooks/*.sh` mechanically enforce the merge gate / ticket-first / secrets-scan rules, and `.claude/skills/*.md` become typed slash commands. **pi** (pi.dev — Earendil's minimal, unopinionated agent CLI) is a deliberately different shape: no `CLAUDE.md`-style auto-load, no hook plumbing, no MCP, no slash-command runner, no plan mode, no background bash, no permission popups. Pi pushes that governance layer to user-installed packages instead of building it in. **apexyard is exactly that layer for a pi user.**
+ApexYard was built for Claude Code first: `CLAUDE.md` loads at session start, `.claude/hooks/*.sh` enforce merge, ticket-first, and secrets-scan rules, and `.claude/skills/*.md` become typed slash commands. **pi** (pi.dev — Earendil's minimal, unopinionated agent CLI) has a different shape: it does not auto-load `CLAUDE.md`, provide hook plumbing or MCP, register slash commands, or include plan mode, background bash, or permission popups. Pi leaves that governance layer to user-installed packages. **ApexYard provides that layer for pi users.**
 
 This doc is the honest today-vs-not-yet breakdown for running apexyard-governed work under pi — updated as of me2resh/apexyard#815 (the shipped adapter) and the 2026-07-09 live proof that closed the last "not yet" this doc used to carry. See me2resh/apexyard#805 (the `AGENTS.md` advisory bridge), me2resh/apexyard#804 (the spike that proved the enforcement pattern viable), me2resh/apexyard#815 (the shipped adapter), and me2resh/apexyard#845 (the hardened install shape).
 
@@ -33,7 +33,6 @@ This doc is the honest today-vs-not-yet breakdown for running apexyard-governed 
 
 | Gap | Why | Tracked as |
 |-----|-----|-----------|
-| **MCP-backed code/docs search** (`apexyard-search`) | Pi's design omits MCP entirely | No dedicated ticket — falls back to plain `grep`/`Read`, which is slower but functionally equivalent |
 | **Role-trigger advisory banners** | Claude Code's `detect-role-trigger.sh` posts a `PreToolUse` reminder banner when a diff matches a role trigger (e.g. touching `**/auth/**`). Pi has no hook to run that check | Self-check `.claude/rules/role-triggers.md` manually |
 | **Slash-command UX** for skills | Pi has no command-registration mechanism; skills are invoked by reading their `SKILL.md` and following the process by hand | Not tracked — an ergonomics gap, not a governance one |
 | **Plan mode, background bash, permission popups** | Deliberately absent from pi's design, not apexyard-specific gaps | N/A — approximate with an explicit "here's my plan, confirming before I execute" pause where `.claude/rules/plan-mode.md` would otherwise apply |

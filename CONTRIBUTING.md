@@ -54,10 +54,15 @@ Full detail lives in `.claude/rules/` (`git-conventions.md`, `pr-quality.md`, `p
 Run what CI runs, locally:
 
 ```bash
-bash bin/run-hook-tests.sh        # ~65 hook/behaviour tests — must be green
-npx markdownlint-cli2 '**/*.md'   # if you touched markdown
+bash bin/run-hook-tests.sh        # hook test suite — must be green
+npx markdownlint-cli2@0.23.2 '**/*.md'  # if you touched markdown (same pin as the gate)
 shellcheck .claude/hooks/*.sh     # if you touched hooks
 ```
+
+CI runs the full hook test suite on each Linux leg and splits macOS bash 3.2
+across four round-robin shards. To select a shard locally, run
+`/bin/bash bin/run-hook-tests.sh --shard 1/4` (add `--list` to list its tests).
+The required `hook test suite` check waits for every leg.
 
 If you add or remove a skill / hook / role, verify that `bash bin/run-pre-push-checks.sh` still passes locally — it runs markdownlint, shellcheck, and the subpack extraction smoke test.
 

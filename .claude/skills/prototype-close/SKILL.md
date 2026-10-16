@@ -5,6 +5,8 @@ argument-hint: "--promote | --discard [<prototype-ticket-number>]"
 allowed-tools: Bash, Read, Write
 ---
 
+Writing: read docs/skills/shared/writing-rule.md before you write a durable artifact.
+
 # /prototype-close — Close a Prototype via the Disposition Gate
 
 The disposition gate prevents the worst-of-both case: a prototype that "looked great in the demo" but never decides what to do with it, leaving a throwaway mockup that quietly gets promoted into production. Every prototype must close with one of two paths:
@@ -42,7 +44,7 @@ Defaults match today's single-fork layout. See `docs/multi-project.md`.
 Two paths:
 
 - If `$ARGUMENTS` includes a number (e.g. `--promote 142` or `--discard owner/repo#142`), use that.
-- Otherwise read the active-ticket marker (`.claude/session/current-ticket` or `.claude/session/tickets/<project>`) and use the ticket recorded there. If neither resolves, ask:
+- Otherwise read the active-ticket marker of the working tree you are in (see `/start-ticket` "Read the active ticket") and use the ticket recorded there. If no marker resolves, ask:
 
 ```
 Which prototype are you closing? Pass --promote <number> or --discard <number>,
